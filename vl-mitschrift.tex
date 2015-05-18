@@ -1,0 +1,178 @@
+\documentclass[a4paper,10pt,ngerman]{article}
+%\documentclass[a4paper,10pt]{scrartcl}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb, amsmath,amsthm}
+\usepackage{enumerate}
+\usepackage[colorlinks, linkcolor = red, citecolor = black, filecolor = black, urlcolor = blue]{hyperref}
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newcommand{\trace}[1]{\text{tr}\left(#1\right)}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows,shapes,angles,quotes}
+
+\title{3D-PCP}
+\author{Andre Löffler}
+\date{last update: \today}
+
+\pdfinfo{%
+  /Title    ()
+  /Author   ()
+  /Creator  ()
+  /Producer ()
+  /Subject  ()
+  /Keywords ()
+}
+
+\begin{document}
+\maketitle
+
+\begin{section}{04.05.2015}
+\underline{Least square fit in 3D:}\\
+\[z= a_1x + a_2y + a_3\]
+\[ e_i = z_i - (a_1x_i+a_2y_i+a_3) \text{  for points  } (x_i,y_i,z_i)\]
+\[ E(a_1,a_2,a_3) = \sum_i \|e_i\|^2  = \sum_i \|z_i - (a_1x_i + a_2y_i + a_3)\|^2\]
+\[ \underbrace{\begin{pmatrix}
+    Z_1 \\ \vdots \\ Z_n
+   \end{pmatrix}}_{Z} = 
+   \underbrace{\begin{pmatrix}
+    x_1 & y_1 & 1 \\
+    &\vdots& \\
+    x_n & y_n & 1 
+   \end{pmatrix}}_{M} \cdot
+   \underbrace{\begin{pmatrix}
+    a_1 \\ a_2 \\ a_3
+   \end{pmatrix}}_{A}
+ \]
+\end{section}
+
+\begin{section}{15.05.2015}
+ in 3D for 3D planes:\\
+ $\vec{A} = \vec{A}_0 + t\cdot \vec{D} + s \cdot \vec{E}$ or $N(x-A) = 0$, where $N$ is the unit-length normal to plane and $A$ is a point on the Plane.
+ 
+ Let $x_i$ be the sample-points:\\
+ $x_i = A \lambda_i - N + p_i N_i^\perp$ where $\underbrace{\lambda_i = N(x_i-A)}_{\text{dist to plane}}$ and $N_i^\perp$ is some unit length vector perpendicular to $N$ with appropriate coefficient $p_i$.
+ 
+ \newcommand\ZeichneGerade[6]{% 
+  \coordinate (Punkt1) at (#1,#2); 
+  \coordinate (Punkt2) at (#3,#4); 
+  \pgfmathsetmacro\m{(#4-#2)/(#3-#1)}% 
+  \pgfmathsetmacro\n{#2-\m*#1}% 
+  \draw plot[domain=#5:#6] (\x,{\m*\x+\n}); 
+} 
+
+\begin{tikzpicture}
+\usetikzlibrary{shapes.misc}
+
+\tikzset{cross/.style={cross out, draw=black, minimum size=10*(#1-\pgflinewidth), inner sep=0pt, outer sep=0pt},
+%default radius will be 1pt. 
+cross/.default={1pt}}
+         
+ \draw (0,0) node[cross,label=below:Origin](O){ };
+ \draw (0,1) node[cross, label=A](A){ };
+ \draw (2,1.5) node[cross, label=below:$p_i$](p){ };
+ \draw (1.7,2.5) node[cross, label=right:$\lambda_i$](l){ };
+ 
+ \ZeichneGerade{0}{1}{2}{1.5}{-2}{5};
+ \draw [- latex] (p.center) -- (l.center);
+ 
+ \pic[
+    draw, % Winkel einzeichnen
+    "$\cdot$" opacity=1 % Beschriftung des Winkels
+    ]{angle=l--p--A}; % Angaben zu Winkel
+\end{tikzpicture}
+
+ 
+ Define $y_i = x_i-A$. The vecotr from $x_i$ to its projection onto the plane is $\lambda_i N$. Then
+ \[\lambda_i^2 = (N\cdot y_i)^2\]
+ is the squared distance to the plane. We define a Error-function
+ \begin{align*}
+  E(A,N) &= \sum_{i=1}^m \lambda_i^2 \\
+  &= \sum_i y_i^T (NN^T) y_i \\
+  &= N^T(\sum_i y_i y_i^T) N \\
+  &= N^T M(A) N
+ \end{align*}
+ Using the first form of $E$:
+ \[\frac{dE}{dA} = -2 [NN^T]\sum_i y_i\]
+ This partial derivative becomes $0$ whenever $\sum_i y_i = 0$ in which case $A = \frac{1}{m} \sum_i x_i$ (the average of all the sample points).\\
+ Given $A$, the matrix $M(A)$ is determined in the second form of $E$
+ \[ N^T M(A) N\]
+ is a quadratic frm, whose minimum is the smallest eigenvalue of $M(A)$. The corresponding unit length vector (eigenvector) $N$ completes our construction of the least square plane.
+ \[ M(A) = \begin{pmatrix} 
+\sum (x_i -a)^2  & \sum (x_i -a)(y_i - b) & \sum (x_i-a)(z_i-c)\\ 
+\sum (x_i -a (y_i-b) & \sum (y_i-b)^2 & \sum (y_i-b)(z_i-c)\\ 
+\sum (x_i-a)(z_i-c) & \sum (z_i -c)(y_i -b) & \sum (z_i-c)^2\\ 
+           \end{pmatrix}
+\]
+
+\[ f(N) = N^TM(A)N \]
+\[ \min f(N) \text{ subject to } N^TN = 1\]
+Solve this with constraint-minimization -- Lagrange-multipliers:
+\[\mathcal{L}(n,\lambda) = f(N) - \lambda(N^TN -1)\]
+\[\frac{d \mathcal{L}}{dN} = 0 \Leftrightarrow M(A) = \lambda N\]
+\[\frac{d \mathcal{L}}{d\lambda} = 0 \Leftrightarrow  N^TN = 1\]
+$N$ is the eigenvector of $M(A)$ with the smallest eigenvalue.
+
+
+\end{section}
+\begin{section}{18.05.2015}
+ \begin{align*}
+  E(R,t) &= \sum_{i=1}^{\sharp m} \sum_{j=1}^{\sharp D} w_{ij} \| \hat{m}_i - (R\hat{d}_i + t )\|^2 \\
+  &= \frac{1}{N} \sum_{i=1}^N \| m_i - (Rd_i +t)\|^2 \\
+ \end{align*}
+ where $R$ needs to be orthonormal.
+ 
+ Complete the centroids:
+ \[ c_m = \frac{1}{N}\sum_{i=1}^N m_i ~~~~~~~~~ c_d = \frac{1}{N}\sum_{i=1}^n d_i \]
+ \[ M' = \{ m_i' = m_i - c_m \} ~~~~~~~~~~~~~~ D' = \{ d_i' = d_i - c_d \} \]
+ \begin{align*}
+  E(R,t) &= \sum_{i=1}^N \|m_i' - Rd_i' - (t-c_m-Rc_d)\|^2 \\
+  &= \frac{1}{N} \sum \| m_i'-Rd_i'\| - \underbrace{\frac{2}{N} t \sum (m_i'-Rd_i')}_{=0} + \underbrace{\frac{1}{N}\sum \|\tilde{t} \|^2}_{\tilde{t} = 0 \rightarrow t = c_m -Rc_d} \\  
+ \end{align*}
+ 
+ %theorem\\
+ \begin{lemma} \label{lemma1}
+  \[ \trace{AA^T} \geq \trace{BAA^T}\]
+ \end{lemma}
+ \begin{proof}
+  without proof.
+ \end{proof}
+
+
+ 
+ \begin{theorem}
+  The optimal rotation is $R=VU^T$. $V$ and $U$ are derived by singular value decomposition $H = U \Lambda V^T$ of a correlation matrix H 
+  \[ H = \sum_{i=1}^N m_i'^T d_i' = \begin{pmatrix}
+                                     S_xx & S_xy & S_xz \\
+                                     S_yx & S_yy & S_yz \\
+                                     S_zx & S_zy & Szz\\
+                                    \end{pmatrix} \]
+where $S_xx = \sum_{i=1}^N m_{x_i}' d_{x_i}' \dots$
+ \end{theorem}
+ \begin{proof}
+  \begin{align*}
+  E &= \sum \| m_i' - Rd_i' \|^2\\
+  &= \sum_{i_1}^N \| m_i' \|^2 - 2 \sum_{i=1}^N m_i'Rd_i' + \underbrace{\sum_{i=1}^N \| Rd_i \|^2}_{\rightarrow \sum_{i=1}^N \|d_i'\|^2} \\   
+  \end{align*}
+  \begin{align*}
+  \min E \Rightarrow &\max \sum_{i=1}^N m_i' Rd_i' \\
+  &= \sum_{i=1}^N m_i'^T Rd_i'\\
+  \end{align*}
+  Using the trace:
+  \[ \trace{\sum_{i=1}^N Rd_i' m_i'^T } = \trace{RH} \]
+  find the $R$ that maximizes the trace $\trace{RH}$.\\
+  Assume that the SVD of $H$ is
+  \[ H = U \Lambda V^T  \]
+  $U$ and $V$ are orthonormal and $\Lambda$ is a $3\times 3$ diagonal matrix without negative elements.
+  \[ R := VU^T\]
+  $R$ is orthonormal and
+  \begin{align*}
+   RH &=  VU^TU\Lambda V^T \\ &= V \Lambda V^T\\
+  \end{align*}
+  using Lemma \ref{lemma1} $\trace{RH} \geq \trace{BRH}$ for any orthonormal matrix B.
+ \end{proof}
+\end{section}
+\end{document}

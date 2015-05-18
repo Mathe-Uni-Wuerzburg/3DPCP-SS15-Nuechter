@@ -1,0 +1,8 @@
+/folien/
+/trunk/
+/übung/
+*.tgz
+*.aux
+*.log
+*.backup
+*.out
